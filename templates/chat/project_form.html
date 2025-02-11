@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">🛠 {% if form.instance.pk %}Modifier{% else %}Créer{% endif %} un Projet</h2>
+    <div class="card shadow-sm p-4">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary w-100 mt-3">
+                <i class="fas fa-save"></i> {% if form.instance.pk %}Enregistrer{% else %}Créer{% endif %}
+            </button>
+            <a href="{% url 'chat:project_list' %}" class="btn btn-secondary w-100 mt-2">Annuler</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-danger">⚠️ Supprimer le Projet</h2>
+    <p class="text-center">Êtes-vous sûr de vouloir supprimer <strong>{{ project.name }}</strong> ?</p>
+    <div class="text-center">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Supprimer
+            </button>
+            <a href="{% url 'chat:project_list' %}" class="btn btn-secondary">Annuler</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

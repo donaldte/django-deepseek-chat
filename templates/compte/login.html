@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Connexion</h2>
+    <div class="card shadow-sm p-4">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success w-100">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+        </form>
+        <div class="text-center mt-3">
+            <p>Pas encore de compte ? <a href="{% url 'compte:signup' %}">Inscrivez-vous</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

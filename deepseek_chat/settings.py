@@ -1,9 +1,20 @@
 
 from decouple import config
 from pathlib import Path
+# configure messages colors 
+from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Messages colors
+MESSAGE_TAGS = {
+    messages.DEBUG: 'alert-secondary',
+    messages.INFO: 'alert-info',
+    messages.SUCCESS: 'alert-success',
+    messages.WARNING: 'alert-warning',
+    messages.ERROR: 'alert-danger',
+}
 
 
 # Quick-start development settings - unsuitable for production
@@ -21,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne', # dalphne is the Django Channels HTTP/WebSocket server
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -31,11 +43,12 @@ INSTALLED_APPS = [
     
     # Apps personnalisées
     "chat",
+    "compte",
 
     # HTMX pour interactivité
     "django_htmx",
+    'channels',
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -48,10 +61,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'deepseek_chat.urls'
 
+LOGIN_REDIRECT_URL = "chat:project_list"
+LOGOUT_REDIRECT_URL = "compte:login"
+LOGIN_URL = "compte:login"
+
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],  # Dossier des templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -66,13 +84,15 @@ TEMPLATES = [
 
 # Configuration Channels
 ASGI_APPLICATION = "deepseek_chat.asgi.application"
+WSGI_APPLICATION = "deepseek_chat.wsgi.application"
 
 # Configuration WebSockets (on utilisera Redis plus tard)
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Utilise Redis en production
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
+
 
 
 # Database

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar: List of projects -->
+        <div class="col-md-3 bg-light p-3 rounded">
+            <h4 class="text-primary"><i class="fas fa-folder"></i> Mes Projets</h4>
+            <ul class="list-group">
+                {% for p in projects %}
+                <li class="list-group-item {% if p.id == project.id %}active{% endif %}">
+                    <a href="{% url 'chat:chat' p.id %}" class="text-decoration-none d-flex align-items-center">
+                        <i class="fas fa-comments text-white me-2"></i> <span class="text-dark"> {{ p.name }} <span>
+                    </a>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-center">Aucun projet</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Chat section -->
+        <div class="col-md-9">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-comment-dots"></i> Chat - {{ project.name }}</h4>
+                </div>
+
+                <div class="card-body chat-container">
+                    <div id="chat-box" class="p-3">
+                        {% for msg in messages_chat %}
+                        <div class="message user-message">
+                            <span class="text-primary"><i class="fas fa-user"></i> Vous :</span> {{ msg.message }}
+                        </div>
+                        <div class="message ai-response">
+                            <span class="text-success"><i class="fas fa-robot"></i> DeepSeek :</span> {{ msg.response|safe }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Chat input -->
+                <div class="card-footer">
+                    <form id="chat-form" class="d-flex">
+                        <div class="input-group">
+                            <!-- Typing indicator -->
+                            <div id="typing-indicator" class="text-center mt-2" style="display: none;">
+                                <i class="fas fa-circle-notch fa-spin text-warning"></i> <span>DeepSeek is typing...</span>
+                            </div>
+                            <input type="text" id="message-input" class="form-control" placeholder="Écrivez un message..." required>
+                            <button id='chat_submit' type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Envoyer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Styles -->
+<style>
+    .chat-container {
+        max-height: 800px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    .message {
+        padding: 8px 12px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+    }
+    .user-message {
+        background: #e3f2fd;
+        text-align: left;
+        border-left: 4px solid #007bff;
+    }
+    .ai-response {
+        background: #e8f5e9;
+        text-align: left;
+        border-left: 4px solid #28a745;
+    }
+    .typing-indicator i {
+        font-size: 1.2rem;
+    }
+    #typing-indicator {
+    font-size: 16px;
+    font-weight: bold;
+    color:rgb(7, 39, 247);
+    }
+
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.markdown-content p {
+    margin-bottom: 10px;
+}
+
+.markdown-content code {
+    background: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.markdown-content pre {
+    background: #2d2d2d;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.markdown-content a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content ul, .markdown-content ol {
+    margin-left: 20px;
+}
+
+</style>
+
+<!-- WebSocket Script -->
+<script>
+    var chatSocket = null; // WebSocket will be initialized only on message send
+    var messageInput = document.getElementById("message-input");
+    var chatBox = document.getElementById("chat-box");
+    var typingIndicator = document.getElementById("typing-indicator");
+    var chatSubmit = document.getElementById("chat_submit");
+    var currentAiMessage = null;
+
+    function openWebSocket() {
+        if (chatSocket !== null) {
+            chatSocket.close(); // Ensure old WebSocket is closed before opening a new one
+        }
+
+        chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/{{ project.id }}/");
+
+        chatSocket.onopen = function() {
+            console.log("WebSocket opened.");
+        };
+
+        chatSocket.onmessage = function(e) {
+            var data = JSON.parse(e.data);
+
+            if (data.sender === "user") {
+                chatBox.innerHTML += `<div class="message user-message">
+                    <span class="text-primary"><i class="fas fa-user"></i> Vous :</span> ${data.message}
+                </div>`;
+            } else if (data.sender === "ai") {
+                // Show typing indicator before AI starts responding
+                typingIndicator.style.display = "block";
+                chatSubmit.disabled = true;
+
+                if (!currentAiMessage) {
+                    // Create a new AI message container for streaming response
+                    currentAiMessage = document.createElement("div");
+                    currentAiMessage.className = "message ai-response";
+                    currentAiMessage.innerHTML = `<span class="text-success"><i class="fas fa-robot"></i> DeepSeek :</span> 
+                        <div class="markdown-content">${data.message}</div>`;
+                    chatBox.appendChild(currentAiMessage);
+                } else {
+                    // Append new chunks instead of replacing
+                    currentAiMessage.querySelector(".markdown-content").innerHTML = data.message;
+                }
+            }
+
+            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll
+        };
+
+        chatSocket.onclose = function() {
+            console.log("WebSocket closed.");
+            typingIndicator.style.display = "none";
+            chatSubmit.disabled = false;
+        };
+    }
+
+    document.getElementById("chat-form").onsubmit = function(event) {
+        event.preventDefault();
+
+        // Open WebSocket only when a new message is sent
+        openWebSocket();
+
+        // Send message
+        chatSocket.onopen = function() {
+            chatSocket.send(JSON.stringify({"message": messageInput.value}));
+            messageInput.value = "";
+            typingIndicator.style.display = "inline-block";  // Show typing animation
+            chatSubmit.disabled = true;
+            currentAiMessage = null;  // Reset AI message container for new response
+        };
+    };
+</script>
+
+
+{% endblock %}
